@@ -1,4 +1,5 @@
-import { gql, useQuery } from "@apollo/client";
+import { gql, useQuery, useMutation } from "@apollo/client";
+import { useState } from "react";
 
 // Types
 interface User {
@@ -46,7 +47,26 @@ const GET_ALL_POSTS = gql`
   }
 `;
 
+const CREATE_POST = gql`
+  mutation CreatePost($title: String!, $content: String!) {
+    createPost(title: $title, content: $content) {
+      id
+      title
+      content
+      createdAt
+      author {
+        id
+        name
+      }
+    }
+  }
+`;
+
 const Dashboard = () => {
+  const [showPostForm, setShowPostForm] = useState(false);
+  const [postTitle, setPostTitle] = useState("");
+  const [postContent, setPostContent] = useState("");
+
   const {
     loading: userLoading,
     error: userError,
@@ -57,7 +77,17 @@ const Dashboard = () => {
     error: postsError,
     data: postsData,
   } = useQuery(GET_ALL_POSTS);
-
+  const [createPost, { loading: createPostLoading }] = useMutation(
+    CREATE_POST,
+    {
+      refetchQueries: [{ query: GET_ALL_POSTS }], // Refetch posts after creating a new one
+      onCompleted: () => {
+        setShowPostForm(false);
+        setPostTitle("");
+        setPostContent("");
+      },
+    }
+  );
   // Combined loading state
   const isLoading = userLoading || postsLoading;
 
@@ -70,7 +100,7 @@ const Dashboard = () => {
   }
 
   // Handle errors
-  if (userError || postsError) {
+  if (userError) {
     return (
       <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded my-4">
         <p>
@@ -110,6 +140,18 @@ const Dashboard = () => {
     }
   };
 
+  const handleSubmitPost = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (postTitle.trim() && postContent.trim()) {
+      createPost({
+        variables: {
+          title: postTitle,
+          content: postContent,
+        },
+      });
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       {/* User Profile Card */}
@@ -140,11 +182,69 @@ const Dashboard = () => {
       <div className="bg-white rounded-lg shadow-md p-6">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold">Recent Posts</h2>
+          <button
+            onClick={() => setShowPostForm(!showPostForm)}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors"
+          >
+            {showPostForm ? "Cancel" : "Create New Post"}
+          </button>
         </div>
+
+        {/* Create Post Form */}
+        {showPostForm && (
+          <div className="mb-6 bg-gray-50 p-4 rounded-lg">
+            <h3 className="text-lg font-medium mb-3">Create a New Post</h3>
+            <form onSubmit={handleSubmitPost}>
+              <div className="mb-4">
+                <label htmlFor="title" className="block text-gray-700 mb-2">
+                  Title
+                </label>
+                <input
+                  type="text"
+                  id="title"
+                  value={postTitle}
+                  onChange={(e) => setPostTitle(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+              <div className="mb-4">
+                <label htmlFor="content" className="block text-gray-700 mb-2">
+                  Content
+                </label>
+                <textarea
+                  id="content"
+                  value={postContent}
+                  onChange={(e) => setPostContent(e.target.value)}
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                ></textarea>
+              </div>
+              <button
+                type="submit"
+                disabled={createPostLoading}
+                className={`px-4 py-2 rounded-md text-white ${
+                  createPostLoading
+                    ? "bg-gray-400"
+                    : "bg-green-500 hover:bg-green-600"
+                }`}
+              >
+                {createPostLoading ? "Posting..." : "Submit Post"}
+              </button>
+            </form>
+          </div>
+        )}
 
         {posts.length === 0 ? (
           <div className="text-center py-10 text-gray-500">
-            No posts available yet.
+            <p className="mb-4">No posts yet. Be the first to create one!</p>
+            <button
+              onClick={() => setShowPostForm(true)}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors"
+            >
+              Create your first post
+            </button>
           </div>
         ) : (
           <div className="space-y-6">
