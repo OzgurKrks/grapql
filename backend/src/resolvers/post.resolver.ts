@@ -13,7 +13,10 @@ export const resolvers = {
       return Post.findById(id).populate('author');
     },
     
-    posts: async () => {
+    posts: async (context: Context) => {
+      if (!context.user) {
+        throw new AuthenticationError('Bu işlem için giriş yapmalısınız');
+      }
       return Post.find().populate('author').sort({ createdAt: -1 });
     },
     
