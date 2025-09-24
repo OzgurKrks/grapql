@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const MONGODB_URI = "mongodb+srv://ozgur:ozgur@cluster0.wjju3xz.mongodb.net/atolye15?retryWrites=true&w=majority";
+const MONGODB_URI = "MONGODB_URI";
 
 if (!MONGODB_URI) {
   throw new Error('MongoDB URI bulunamadı. Lütfen .env dosyasını kontrol edin.');
@@ -18,5 +18,6 @@ export const connectDB = async (): Promise<void> => {
     process.exit(1);
   }
 };
+
 
 export default connectDB; 
